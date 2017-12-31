@@ -76,16 +76,28 @@ function love.keypressed(key, unicode)
   end
 end
 
+function love.mousemoved(x, y, dx, dy)
+  if love.mouse.isDown(1) then
+    cell_clicked(x, y, true)
+  elseif love.mouse.isDown(2) then
+    cell_clicked(x, y, false)
+  end
+end
+
 function love.mousepressed(x, y, button, isTouch)
+  if button == 1 then
+    cell_clicked(x, y, true)
+  elseif button == 2 then
+    cell_clicked(x, y, false)
+  end
+end
+
+function cell_clicked(x, y, alive)
   local row_num = math.floor((y - padding) / cell_height)
   local col_num = math.floor(x / cell_width)
   local clicked_cell = cell_array[row_num*max_columns + col_num]
   if clicked_cell and within_bounds(row_num, col_num) then
-    if button == 1 then
-      clicked_cell.alive = true
-    elseif button == 2 then
-      clicked_cell.alive = false
-    end
+    clicked_cell.alive = alive
   end
 end
 

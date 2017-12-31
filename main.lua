@@ -3,8 +3,8 @@ local cell_array
 local max_rows
 local max_columns
 local padding = 20
-local cell_width = 20
-local cell_height = 20
+local cell_width = 10
+local cell_height = 10
 local is_running = true
 local previous_highlight = nil
 
@@ -25,11 +25,11 @@ function love.update(dt)
     if dnext >= .1 then
       dnext = 0
       for row = 0, max_rows - 1 do
-        for col = 1, max_columns do
+        for col = 0, max_columns - 1 do
           -- Count live neighbors
           local live_neighbors = 0
-          local min_ncol = col == 1 and 0 or -1
-          local max_ncol = col == max_columns and 0 or 1
+          local min_ncol = col == 0 and 0 or -1
+          local max_ncol = col == max_columns - 1 and 0 or 1
           for ncol = min_ncol, max_ncol do
             local rn1 = cell_array[(row-1)*max_columns + col + ncol]
             if rn1 and rn1.alive then
@@ -51,7 +51,7 @@ function love.update(dt)
         end
       end
 
-      for c = 1, #cell_array do
+      for c = 0, #cell_array do
         cell_array[c]:update()
       end
     end
@@ -60,7 +60,7 @@ end
 
 function love.draw()
   love.graphics.setBackgroundColor(52, 152, 219)
-  for c = 1, #cell_array do
+  for c = 0, #cell_array do
     cell_array[c]:draw()
   end
 end
@@ -69,7 +69,7 @@ function love.keypressed(key, unicode)
   if key == 'r' then -- Reset
     generate_cells()
   elseif key == 'd' then -- Kill all cells
-    for c = 1, #cell_array do
+    for c = 0, #cell_array do
       cell_array[c].alive = false
     end
   elseif key == 'space' then
@@ -97,12 +97,12 @@ end
 function generate_cells()
   cell_array = {}
   for row = 0, max_rows - 1 do
-    for col = 1, max_columns do
+    for col = 0, max_columns - 1 do
       local clive = false
       if math.random(0, 1) == 1 then
         clive = true
       end
-      cell_array[row*max_columns + col] = Cell:new(col * cell_width, (row+1) * cell_height, cell_width, cell_height, clive)
+      cell_array[row*max_columns + col] = Cell:new(col * cell_width + padding, row * cell_height + padding, cell_width, cell_height, clive)
     end
   end
 end
@@ -127,7 +127,7 @@ end
 
 function get_hovered_cell(x, y)
   local row_num = math.floor((y - padding) / cell_height)
-  local col_num = math.floor(x / cell_width)
+  local col_num = math.floor((x - padding) / cell_width)
   local hovered_cell = cell_array[row_num*max_columns + col_num]
   if hovered_cell and within_bounds(row_num, col_num) then
     return hovered_cell
@@ -135,5 +135,5 @@ function get_hovered_cell(x, y)
 end
 
 function within_bounds(r, c)
-  return r >= 0 and r < max_rows and c >= 1 and c <= max_columns
+  return r >= 0 and r < max_rows and c >= 0 and c < max_columns
 end

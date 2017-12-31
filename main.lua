@@ -68,3 +68,11 @@ function love.draw()
     cell_array[c]:draw()
   end
 end
+
+function love.keypressed(key, unicode)
+  if key == 'd' then -- Kill all cells
+    for c = 1, #cell_array do
+      cell_array[c].alive = false
+    end
+  end
+end

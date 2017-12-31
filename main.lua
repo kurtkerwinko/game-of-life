@@ -6,6 +6,7 @@ local padding = 20
 local cell_width = 20
 local cell_height = 20
 local is_running = true
+local previous_highlight = nil
 
 function love.load()
   max_rows = (love.graphics.getHeight() - padding * 2) / cell_height
@@ -77,6 +78,7 @@ function love.keypressed(key, unicode)
 end
 
 function love.mousemoved(x, y, dx, dy)
+  highlight_cell(x, y)
   if love.mouse.isDown(1) then
     cell_clicked(x, y, true)
   elseif love.mouse.isDown(2) then
@@ -92,15 +94,6 @@ function love.mousepressed(x, y, button, isTouch)
   end
 end
 
-function cell_clicked(x, y, alive)
-  local row_num = math.floor((y - padding) / cell_height)
-  local col_num = math.floor(x / cell_width)
-  local clicked_cell = cell_array[row_num*max_columns + col_num]
-  if clicked_cell and within_bounds(row_num, col_num) then
-    clicked_cell.alive = alive
-  end
-end
-
 function generate_cells()
   cell_array = {}
   for row = 0, max_rows - 1 do
@@ -111,6 +104,33 @@ function generate_cells()
       end
       cell_array[row*max_columns + col] = Cell:new(col * cell_width, (row+1) * cell_height, cell_width, cell_height, clive)
     end
+  end
+end
+
+function highlight_cell(x, y)
+  if previous_highlight then
+    previous_highlight.highlight = false
+  end
+  local hovered_cell = get_hovered_cell(x, y)
+  if hovered_cell then
+    previous_highlight = hovered_cell
+    hovered_cell.highlight = true
+  end
+end
+
+function cell_clicked(x, y, alive)
+  local clicked_cell = get_hovered_cell(x, y)
+  if clicked_cell then
+    clicked_cell.alive = alive
+  end
+end
+
+function get_hovered_cell(x, y)
+  local row_num = math.floor((y - padding) / cell_height)
+  local col_num = math.floor(x / cell_width)
+  local hovered_cell = cell_array[row_num*max_columns + col_num]
+  if hovered_cell and within_bounds(row_num, col_num) then
+    return hovered_cell
   end
 end
 

@@ -10,6 +10,7 @@ function Cell:new(x, y, width, height, alive)
   ce.height = height
   ce.alive = alive
   ce.live_neighbor_count = 2
+  ce.highlight = false
   return ce
 end
 
@@ -41,6 +42,10 @@ function Cell:draw()
     love.graphics.setColor(255, 255, 255)
   end
   love.graphics.rectangle("fill", self.x, self.y, self.width, self.height)
+  if self.highlight then
+    love.graphics.setColor(230, 126, 34, 175)
+    love.graphics.rectangle("fill", self.x, self.y, self.width, self.height)
+  end
 end
 
 return Cell

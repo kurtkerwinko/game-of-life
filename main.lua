@@ -1,18 +1,15 @@
+local conf = require "conf"
 local Cell = require "Cell"
 local cell_array
 local max_rows
 local max_columns
-local padding = 20
+local padding
 local cell_width = 10
 local cell_height = 10
 local is_running = true
 local previous_highlight = nil
 
 function love.load()
-  max_rows = (love.graphics.getHeight() - padding * 2) / cell_height
-  max_columns = (love.graphics.getWidth() - padding * 2) / cell_width
-
-  -- Generate Cells
   generate_cells()
 end
 
@@ -74,6 +71,14 @@ function love.keypressed(key, unicode)
     end
   elseif key == 'space' then
     is_running = not is_running
+  elseif key == 'p' then
+    if love.window.getFullscreen() then
+      love.window.setFullscreen(false)
+      love.window.setMode(800, 800, {resizable=true})
+      generate_cells()
+    else
+      love.window.setFullscreen(true)
+    end
   end
 end
 
@@ -94,7 +99,15 @@ function love.mousepressed(x, y, button, isTouch)
   end
 end
 
+function love.resize(w, h)
+  generate_cells()
+end
+
 function generate_cells()
+  padding = 15 + math.max(math.floor(((love.graphics.getHeight() % 20) / 2)), math.floor(((love.graphics.getWidth() % 20) / 2)))
+  max_rows = math.floor((love.graphics.getHeight() - padding * 2) / cell_height)
+  max_columns = math.floor((love.graphics.getWidth() - padding * 2) / cell_width)
+
   cell_array = {}
   for row = 0, max_rows - 1 do
     for col = 0, max_columns - 1 do

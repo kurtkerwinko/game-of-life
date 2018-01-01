@@ -1,4 +1,9 @@
 # Conway's Game of Life
 
-## Todo
-1. Variable resolution / Fullscreen
+## Controls
+**r** - Reset cells  
+**d** - Kill all cells  
+**space** - Pause cells  
+**p** - Toggle fullscreen  
+**left-click** - Resurrect cell  
+**right-click** - Kill cell  

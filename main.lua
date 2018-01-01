@@ -74,7 +74,7 @@ function love.keypressed(key, unicode)
   elseif key == 'p' then
     if love.window.getFullscreen() then
       love.window.setFullscreen(false)
-      love.window.setMode(800, 800, {resizable=true})
+      love.window.setMode(800, 800, { resizable=true, minwidth=conf.t.window.minwidth, minheight=conf.t.window.minheight })
       generate_cells()
     else
       love.window.setFullscreen(true)

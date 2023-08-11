@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Game of Life
+Comment=Conway's Game of Life in LÖVE
+MimeType=application/x-love-game;
+Exec=GameOfLife %f
+Type=Application
+Categories=Game;
+Terminal=false
+Icon=love
+NoDisplay=true

@@ -12,6 +12,8 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     env:
       LOVE_VERSION: 11.4
       APPIMAGE_VERSION: 13

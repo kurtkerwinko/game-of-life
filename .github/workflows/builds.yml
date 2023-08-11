@@ -1,0 +1,140 @@
+name: Builds
+
+on:
+  push:
+    branches: master
+  release:
+    types: [published]
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      LOVE_VERSION: 11.4
+      APPIMAGE_VERSION: 13
+      BUILD_DIR: /tmp/builds
+      BUILD_UTILS_DIR: /tmp/build_utils
+
+    steps:
+    - uses: actions/checkout@v1
+      with:
+        fetch-depth: 1
+
+    - name: Setup environment
+      id: setup_environment
+      run: |
+        if [[ "${{ github.event_name }}" = "pull_request" ]]; then
+          PR_NUMBER=$(jq -r .pull_request.number "${GITHUB_EVENT_PATH}")
+          BUILD_VERSION="0.${PR_NUMBER}.${{ github.run_number }}"
+        elif [[ "${{ github.event_name }}" = "push" ]]; then
+          BUILD_VERSION="0.0.${{ github.run_number }}"
+        else
+          RELEASE_REGEX="^([0-9])+\.([0-9])+\.([0-9])+$"
+          if [[ "${{ github.event.release.tag_name }}" =~ ${RELEASE_REGEX} ]]; then
+            BUILD_VERSION="${{ github.event.release.tag_name }}"
+          else
+            exit 1
+          fi
+        fi
+        echo "BUILD_VERSION=${BUILD_VERSION}" >> "$GITHUB_ENV"
+
+        sudo apt update -y
+        sudo apt install -y libfuse2
+
+        mkdir -p ${BUILD_DIR} ${BUILD_UTILS_DIR}
+        cd ${BUILD_UTILS_DIR}
+
+        # Download love
+        LOVE_URL="https://github.com/love2d/love/releases/download/${LOVE_VERSION}/love-${LOVE_VERSION}-x86_64.AppImage"
+        LOVE_PATH="${BUILD_UTILS_DIR}/love.AppImage"
+        curl -Lo ${LOVE_PATH} ${LOVE_URL}
+        chmod +x ${LOVE_PATH}
+        echo "LOVE_PATH=${LOVE_PATH}" >> "$GITHUB_ENV"
+
+        # Download AppImage
+        APPIMAGE_URL="https://github.com/AppImage/AppImageKit/releases/download/${APPIMAGE_VERSION}/appimagetool-x86_64.AppImage"
+        APPIMAGE_PATH="${BUILD_UTILS_DIR}/appimagetool.AppImage"
+        curl -Lo ${APPIMAGE_PATH} ${APPIMAGE_URL}
+        chmod +x ${APPIMAGE_PATH}
+        echo "APPIMAGE_PATH=${APPIMAGE_PATH}" >> "$GITHUB_ENV"
+
+        BUILD_BASENAME="GameOfLife-${BUILD_VERSION}"
+        echo "BUILD_BASENAME=${BUILD_BASENAME}" >> "$GITHUB_ENV"
+        echo "LOVE_BUILD_NAME=${BUILD_BASENAME}.love" >> "$GITHUB_ENV"
+        echo "APPIMAGE_BUILD_NAME=${BUILD_BASENAME}.AppImage" >> "$GITHUB_ENV"
+        echo "WINDOWS_BUILD_NAME=${BUILD_BASENAME}-win32" >> "$GITHUB_ENV"
+
+    - name: Build love file
+      id: build_love_file
+      run: zip -9 -r ${BUILD_DIR}/${LOVE_BUILD_NAME} .
+      working-directory: src
+
+    - name: Build Linux
+      id: build_linux
+      run: |
+        cd ${BUILD_UTILS_DIR}
+        ${LOVE_PATH} --appimage-extract
+        cat squashfs-root/bin/love ${BUILD_DIR}/${LOVE_BUILD_NAME} > squashfs-root/bin/GameOfLife
+        rm squashfs-root/bin/love squashfs-root/love.desktop
+        chmod +x squashfs-root/bin/GameOfLife
+        cp ${GITHUB_WORKSPACE}/gameoflife.desktop squashfs-root
+        ${APPIMAGE_PATH} squashfs-root ${BUILD_DIR}/${APPIMAGE_BUILD_NAME}
+        rm -r squashfs-root
+
+    - name: Build Windows
+      id: build_windows
+      run: |
+        WINDOWS_BUILD_DIR=/tmp/${BUILD_BASENAME}
+        mkdir -p ${WINDOWS_BUILD_DIR}
+        cd ${WINDOWS_BUILD_DIR}
+        LOVE_URL="https://github.com/love2d/love/releases/download/${LOVE_VERSION}/love-${LOVE_VERSION}-win32.zip"
+        curl -Lo love.zip ${LOVE_URL}
+        unzip -j love.zip \
+          love-${LOVE_VERSION}-win32/love.exe \
+          love-${LOVE_VERSION}-win32/SDL2.dll \
+          love-${LOVE_VERSION}-win32/OpenAL32.dll \
+          love-${LOVE_VERSION}-win32/license.txt \
+          love-${LOVE_VERSION}-win32/love.dll \
+          love-${LOVE_VERSION}-win32/lua51.dll \
+          love-${LOVE_VERSION}-win32/mpg123.dll \
+          love-${LOVE_VERSION}-win32/msvcp120.dll \
+          love-${LOVE_VERSION}-win32/msvcr120.dll
+        cat love.exe ${BUILD_DIR}/${LOVE_BUILD_NAME} > ${BUILD_BASENAME}.exe
+        rm love.exe
+        rm love.zip
+        zip -9 -r ${BUILD_DIR}/${WINDOWS_BUILD_NAME}.zip .
+        echo "WINDOWS_BUILD_DIR=${WINDOWS_BUILD_DIR}" >> "$GITHUB_ENV"
+      working-directory: ${{ env.BUILD_UTILS_DIR }}
+
+    - name: Upload love file
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ env.LOVE_BUILD_NAME }}
+        path: ${{ env.BUILD_DIR }}/${{ env.LOVE_BUILD_NAME }}
+
+    - name: Upload AppImage file
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ env.APPIMAGE_BUILD_NAME }}
+        path: ${{ env.BUILD_DIR }}/${{ env.APPIMAGE_BUILD_NAME }}
+
+    - name: Upload Windows file
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ env.WINDOWS_BUILD_NAME }}
+        path: ${{ env.WINDOWS_BUILD_DIR }}
+
+    - name: Upload releases
+      id: upload_releases
+      run: |
+        .github/scripts/upload_release_asset.sh "${BUILD_DIR}/${LOVE_BUILD_NAME}"
+        .github/scripts/upload_release_asset.sh "${BUILD_DIR}/${APPIMAGE_BUILD_NAME}"
+        .github/scripts/upload_release_asset.sh "${BUILD_DIR}/${WINDOWS_BUILD_NAME}.zip"
+      env:
+        SECRETS_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      if: ${{ github.event_name == 'release' }}

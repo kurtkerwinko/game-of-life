@@ -1,7 +1,7 @@
 local conf = {}
 
 function love.conf(t)
-  t.version = "0.10.2"
+  t.version = "11.4"
   t.window.title = "Game of Life"
   t.window.borderless = false
   t.window.resizable = true

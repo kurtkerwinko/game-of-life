@@ -50,10 +50,6 @@ jobs:
         chmod +x ${LOVE_PATH}
         echo "LOVE_PATH=${LOVE_PATH}" >> "$GITHUB_ENV"
 
-        LOVE_URL="https://github.com/love2d/love/releases/download/${LOVE_VERSION}/love-${LOVE_VERSION}-win32.zip"
-        curl -Lo love.zip ${LOVE_URL}
-        unzip -j love.zip love-${LOVE_VERSION}-win32/love.exe
-
         # Download AppImage
         APPIMAGE_URL="https://github.com/AppImage/AppImageKit/releases/download/${APPIMAGE_VERSION}/appimagetool-x86_64.AppImage"
         APPIMAGE_PATH="${BUILD_UTILS_DIR}/appimagetool.AppImage"
@@ -61,9 +57,11 @@ jobs:
         chmod +x ${APPIMAGE_PATH}
         echo "APPIMAGE_PATH=${APPIMAGE_PATH}" >> "$GITHUB_ENV"
 
-        echo "LOVE_BUILD_NAME=GameOfLife-${BUILD_VERSION}.love" >> "$GITHUB_ENV"
-        echo "APPIMAGE_BUILD_NAME=GameOfLife-${BUILD_VERSION}.AppImage" >> "$GITHUB_ENV"
-        echo "EXE_BUILD_NAME=GameOfLife-${BUILD_VERSION}.exe" >> "$GITHUB_ENV"
+        BUILD_BASENAME="GameOfLife-${BUILD_VERSION}"
+        echo "BUILD_BASENAME=${BUILD_BASENAME}" >> "$GITHUB_ENV"
+        echo "LOVE_BUILD_NAME=${BUILD_BASENAME}.love" >> "$GITHUB_ENV"
+        echo "APPIMAGE_BUILD_NAME=${BUILD_BASENAME}.AppImage" >> "$GITHUB_ENV"
+        echo "WINDOWS_BUILD_NAME=${BUILD_BASENAME}-win32" >> "$GITHUB_ENV"
 
     - name: Build love file
       id: build_love_file
@@ -84,7 +82,27 @@ jobs:
 
     - name: Build Windows
       id: build_windows
-      run: cat love.exe ${BUILD_DIR}/${LOVE_BUILD_NAME} > ${BUILD_DIR}/${EXE_BUILD_NAME}
+      run: |
+        WINDOWS_BUILD_DIR=/tmp/${BUILD_BASENAME}
+        mkdir -p ${WINDOWS_BUILD_DIR}
+        cd ${WINDOWS_BUILD_DIR}
+        LOVE_URL="https://github.com/love2d/love/releases/download/${LOVE_VERSION}/love-${LOVE_VERSION}-win32.zip"
+        curl -Lo love.zip ${LOVE_URL}
+        unzip -j love.zip \
+          love-${LOVE_VERSION}-win32/love.exe \
+          love-${LOVE_VERSION}-win32/SDL2.dll \
+          love-${LOVE_VERSION}-win32/OpenAL32.dll \
+          love-${LOVE_VERSION}-win32/license.txt \
+          love-${LOVE_VERSION}-win32/love.dll \
+          love-${LOVE_VERSION}-win32/lua51.dll \
+          love-${LOVE_VERSION}-win32/mpg123.dll \
+          love-${LOVE_VERSION}-win32/msvcp120.dll \
+          love-${LOVE_VERSION}-win32/msvcr120.dll
+        cat love.exe ${BUILD_DIR}/${LOVE_BUILD_NAME} > ${BUILD_BASENAME}.exe
+        rm love.exe
+        rm love.zip
+        zip -9 -r ${BUILD_DIR}/${WINDOWS_BUILD_NAME}.zip .
+        echo "WINDOWS_BUILD_DIR=${WINDOWS_BUILD_DIR}" >> "$GITHUB_ENV"
       working-directory: ${{ env.BUILD_UTILS_DIR }}
 
     - name: Upload love file
@@ -99,18 +117,18 @@ jobs:
         name: ${{ env.APPIMAGE_BUILD_NAME }}
         path: ${{ env.BUILD_DIR }}/${{ env.APPIMAGE_BUILD_NAME }}
 
-    - name: Upload exe file
+    - name: Upload Windows file
       uses: actions/upload-artifact@v3
       with:
-        name: ${{ env.EXE_BUILD_NAME }}
-        path: ${{ env.BUILD_DIR }}/${{ env.EXE_BUILD_NAME }}
+        name: ${{ env.WINDOWS_BUILD_NAME }}
+        path: ${{ env.WINDOWS_BUILD_DIR }}
 
     - name: Upload releases
       id: upload_releases
       run: |
         .github/scripts/upload_release_asset.sh "${BUILD_DIR}/${LOVE_BUILD_NAME}"
         .github/scripts/upload_release_asset.sh "${BUILD_DIR}/${APPIMAGE_BUILD_NAME}"
-        .github/scripts/upload_release_asset.sh "${BUILD_DIR}/${EXE_BUILD_NAME}"
+        .github/scripts/upload_release_asset.sh "${BUILD_DIR}/${WINDOWS_BUILD_NAME}.zip"
       env:
         SECRETS_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       if: ${{ github.event_name == 'release' }}

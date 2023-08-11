@@ -1,6 +1,8 @@
 name: Builds
 
 on:
+  push:
+    branch: master
   release:
     types: [published]
   pull_request:
@@ -27,6 +29,8 @@ jobs:
         if [[ "${{ github.event_name }}" = "pull_request" ]]; then
           PR_NUMBER=$(jq -r .pull_request.number "${GITHUB_EVENT_PATH}")
           BUILD_VERSION="0.${PR_NUMBER}.${{ github.run_number }}"
+        elif [[ "${{ github.event_name }}" = "push" ]]; then
+          BUILD_VERSION="0.0.${{ github.run_number }}"
         else
           RELEASE_REGEX="^([0-9])+\.([0-9])+\.([0-9])+$"
           if [[ "${{ github.event.release.tag_name }}" =~ ${RELEASE_REGEX} ]]; then

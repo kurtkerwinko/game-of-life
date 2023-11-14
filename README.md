@@ -27,9 +27,9 @@ Replace `[VERSION]` with the latest version number (e.g. `1.0.0`)
     - `./GameOfLife-[VERSION].AppImage`
 
 ## Controls
-**r** - Reset cells  
-**d** - Kill all cells  
-**space** - Pause cells  
-**p** - Toggle fullscreen  
-**left-click** - Resurrect cell  
-**right-click** - Kill cell  
+Reset cells - <kbd>r</kbd>
+Kill all cells - <kbd>d</kbd>
+Pause cells - <kbd>space</kbd>
+Toggle fullscreen - <kbd>p</kbd>
+Resurrect cell - Hover on cell and <kbd>left-click</kbd>
+Kill cell - Hover on cell and <kbd>right-click</kbd>
